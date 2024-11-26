@@ -212,9 +212,9 @@ async function fetchWikipediaDetails(query) {
 
     } catch (err) {
 
-        console.error("Wikipedia APIエラー: ", err);
+        console.error("APIエラー: ", err);
 
-        return "Wikipedia APIエラー";
+        return "APIエラー";
 
     }
 
