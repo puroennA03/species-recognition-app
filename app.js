@@ -1,14 +1,26 @@
 const camera = document.getElementById("camera");
 
+
+
 const snapshotCanvas = document.getElementById("snapshotCanvas");
+
+
 
 const uploadInput = document.getElementById("uploadInput");
 
+
+
 const captureButton = document.getElementById("captureButton");
+
+
 
 const uploadButton = document.getElementById("uploadButton");
 
+
+
 const identifyButton = document.getElementById("identifyButton");
+
+
 
 const resultsDiv = document.getElementById("results");
 
@@ -16,59 +28,9 @@ const resultsDiv = document.getElementById("results");
 
 let selectedImage = null;
 
-let mobilenetModel = null;
-
-let labelMap = {};  // ラベルマップを格納するオブジェクト
 
 
-
-// ラベルマップを外部JSONファイルからロード
-
-async function loadLabelMap() {
-
-    try {
-
-        const response = await fetch('labels.json');  // サーバー上のJSONファイルを指定
-
-        if (!response.ok) {
-
-            throw new Error("ラベルマップの読み込みに失敗しました");
-
-        }
-
-        labelMap = await response.json();  // JSONデータを読み込んでlabelMapに格納
-
-        console.log('ラベルマップがロードされました');
-
-    } catch (error) {
-
-        console.error(error);
-
-        alert("ラベルマップの読み込みに失敗しました。");
-
-    }
-
-}
-
-
-
-// 初期化：MobileNetモデルをロード
-
-async function init() {
-
-    mobilenetModel = await mobilenet.load();
-
-    console.log("MobileNetモデルがロードされました。");
-
-    await loadLabelMap();  // ラベルマップもロード
-
-}
-
-init();
-
-
-
-// アップロードボタンイベント
+// アップロードボタンを押すとファイル選択を表示
 
 uploadButton.addEventListener("click", () => {
 
@@ -122,13 +84,9 @@ function stopCamera() {
 
     const stream = camera.srcObject;
 
-    if (stream) {
+    const tracks = stream.getTracks();
 
-        const tracks = stream.getTracks();
-
-        tracks.forEach(track => track.stop());
-
-    }
+    tracks.forEach(track => track.stop());
 
     camera.hidden = true;
 
@@ -176,7 +134,9 @@ identifyButton.addEventListener("click", async () => {
 
 
 
-    // MobileNetで識別
+    // MobileNetでの識別処理
+
+    const model = await mobilenet.load();
 
     const imageElement = new Image();
 
@@ -184,7 +144,7 @@ identifyButton.addEventListener("click", async () => {
 
     imageElement.onload = async () => {
 
-        const predictions = await mobilenetModel.classify(imageElement);
+        const predictions = await model.classify(imageElement);
 
         if (predictions.length > 0) {
 
@@ -192,35 +152,51 @@ identifyButton.addEventListener("click", async () => {
 
 
 
-            // 日本語ラベリング適用
+            // 翻訳処理（省略してもOK）
 
-            const japaneseLabel = labelMap[topPrediction] || `未登録ラベル: ${topPrediction}`;
+            const translatedPrediction = await translateToJapanese(topPrediction);
 
 
 
-            // 結果を表示
+            // 結果をHTMLに表示
 
             resultsDiv.innerHTML = `
 
                 <h2>識別結果</h2>
 
-                <p>名前（英語）: ${topPrediction}</p>
+                <p>英語名: ${topPrediction}</p>
 
-                <p>名前（日本語）: ${japaneseLabel}</p>
+                <p>日本語名: ${translatedPrediction}</p>
 
-                <button id="correctButton">間違っていますか？</button>
+                <p>上記の結果が間違っている場合は、正しい名称を入力してください。</p>
+
+                <input type="text" id="customLabel" placeholder="正しい名称を入力">
+
+                <button id="submitLabel">正しい名称を送信</button>
 
             `;
 
 
 
-            // 再学習用ボタンのイベント
+            // 新しいラベル送信ボタンの処理
 
-            document.getElementById("correctButton").addEventListener("click", () => {
+            document.getElementById("submitLabel").addEventListener("click", () => {
 
-                displayCorrectionInterface(topPrediction);
+                const customLabel = document.getElementById("customLabel").value;
+
+                if (customLabel) {
+
+                    resultsDiv.innerHTML = `<p>正しい名称: ${customLabel} が入力されました。</p>`;
+
+                } else {
+
+                    resultsDiv.innerHTML = "<p>正しい名称が入力されていません。</p>";
+
+                }
 
             });
+
+
 
         } else {
 
@@ -234,60 +210,22 @@ identifyButton.addEventListener("click", async () => {
 
 
 
-// 修正インターフェースを表示
+// 翻訳処理
 
-function displayCorrectionInterface(currentLabel) {
+async function translateToJapanese(text) {
 
-    resultsDiv.innerHTML += `
+    try {
 
-        <div id="correctionForm">
+        const response = await axios.get(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|ja`);
 
-            <p>正しい名前を入力してください:</p>
+        return response.data.responseData.translatedText || "翻訳エラー";
 
-            <input type="text" id="newLabel" placeholder="正しい名前">
+    } catch (err) {
 
-            <button id="submitCorrection">送信</button>
+        console.error("翻訳エラー: ", err);
 
-        </div>
+        return "翻訳エラー";
 
-    `;
-
-
-
-    document.getElementById("submitCorrection").addEventListener("click", () => {
-
-        const newLabel = document.getElementById("newLabel").value;
-
-        if (newLabel) {
-
-            trainModel(currentLabel, newLabel);
-
-        }
-
-    });
-
-}
-
-
-
-// 再学習処理
-
-function trainModel(oldLabel, newLabel) {
-
-    // ラベルマッピングを更新
-
-    labelMap[oldLabel] = newLabel;
-
-    console.log(`モデルを再学習: ${oldLabel} -> ${newLabel}`);
-
-
-
-    // ユーザー通知
-
-    resultsDiv.innerHTML = `
-
-        <p>再学習完了: ${oldLabel} の新しいラベルは ${newLabel} です。</p>
-
-    `;
+    }
 
 }
