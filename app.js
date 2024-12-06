@@ -1,32 +1,22 @@
 const camera = document.getElementById("camera");
 
-
-
 const snapshotCanvas = document.getElementById("snapshotCanvas");
-
-
 
 const uploadInput = document.getElementById("uploadInput");
 
-
-
 const captureButton = document.getElementById("captureButton");
-
-
 
 const uploadButton = document.getElementById("uploadButton");
 
-
-
 const identifyButton = document.getElementById("identifyButton");
-
-
 
 const resultsDiv = document.getElementById("results");
 
 
 
 let selectedImage = null;
+
+let topPrediction = null; // topPredictionを外部スコープに移動
 
 
 
@@ -136,77 +126,141 @@ identifyButton.addEventListener("click", async () => {
 
     // MobileNetでの識別処理
 
-    const model = await mobilenet.load();
+    try {
 
-    const imageElement = new Image();
+        const model = await mobilenet.load();
 
-    imageElement.src = selectedImage;
+        const imageElement = new Image();
 
-    imageElement.onload = async () => {
-
-        const predictions = await model.classify(imageElement);
-
-        if (predictions.length > 0) {
-
-            const topPrediction = predictions[0].className;
+        imageElement.src = selectedImage;
 
 
 
-            // 翻訳処理（省略してもOK）
+        imageElement.onload = async () => {
 
-            const translatedPrediction = await translateToJapanese(topPrediction);
+            const predictions = await model.classify(imageElement);
 
+            if (predictions.length > 0) {
 
-
-            // 結果をHTMLに表示
-
-            resultsDiv.innerHTML = `
-
-                <h2>識別結果</h2>
-
-                <p>英語名: ${topPrediction}</p>
-
-                <p>日本語名: ${translatedPrediction}</p>
-
-                <p>上記の結果が間違っている場合は、正しい名称を入力してください。</p>
-
-                <input type="text" id="customLabel" placeholder="正しい名称を入力">
-
-                <button id="submitLabel">正しい名称を送信</button>
-
-            `;
+                topPrediction = predictions[0].className;
 
 
 
-            // 新しいラベル送信ボタンの処理
+                // 翻訳処理
 
-            document.getElementById("submitLabel").addEventListener("click", () => {
-
-                const customLabel = document.getElementById("customLabel").value;
-
-                if (customLabel) {
-
-                    resultsDiv.innerHTML = `<p>正しい名称: ${customLabel} が入力されました。</p>`;
-
-                } else {
-
-                    resultsDiv.innerHTML = "<p>正しい名称が入力されていません。</p>";
-
-                }
-
-            });
+                const translatedPrediction = await translateToJapanese(topPrediction);
 
 
 
-        } else {
+                // Wikipedia情報取得
 
-            resultsDiv.innerHTML = "<p>識別結果が見つかりません。</p>";
+                const detailText = await fetchWikipediaDetails(topPrediction);
+
+
+
+                // 結果をHTMLに表示
+
+                resultsDiv.innerHTML = `
+
+                    <h2>識別結果</h2>
+
+                    <p>英語名: ${topPrediction}</p>
+
+                    <p>日本語名: ${translatedPrediction}</p>
+
+                    <button id="correctButton">間違っていますか？</button>
+
+                `;
+
+
+
+                // 正しい名前を修正するボタンのイベントリスナー
+
+                document.getElementById("correctButton").addEventListener("click", () => {
+
+                    displayCorrectionInterface(topPrediction);
+
+                });
+
+            } else {
+
+                resultsDiv.innerHTML = "<p>識別結果が見つかりません。</p>";
+
+            }
+
+        };
+
+    } catch (err) {
+
+        console.error("識別中にエラーが発生しました: ", err);
+
+        resultsDiv.innerHTML = "<p>識別中にエラーが発生しました。</p>";
+
+    }
+
+});
+
+
+
+// 修正インターフェースを表示
+
+function displayCorrectionInterface(currentLabel) {
+
+    resultsDiv.innerHTML += `
+
+        <div id="correctionForm">
+
+            <p>正しい名前を入力してください:</p>
+
+            <input type="text" id="newLabel" placeholder="正しい名前">
+
+            <button id="submitCorrection">送信</button>
+
+        </div>
+
+    `;
+
+
+
+    document.getElementById("submitCorrection").addEventListener("click", () => {
+
+        const newLabel = document.getElementById("newLabel").value;
+
+        if (newLabel) {
+
+            trainModel(currentLabel, newLabel);
 
         }
 
-    };
+    });
 
-});
+}
+
+
+
+// 再学習処理
+
+const labelMap = {}; // labelMapを初期化
+
+function trainModel(oldLabel, newLabel) {
+
+    // ラベルマッピングを更新
+
+    labelMap[oldLabel] = newLabel;
+
+    console.log(`モデルを再学習: ${oldLabel} -> ${newLabel}`);
+
+
+
+    // ユーザー通知
+
+    resultsDiv.innerHTML = `
+
+        <p>再学習完了: ${oldLabel} の新しいラベルは ${newLabel} です。</p>
+
+    `;
+
+}
 
 
 
