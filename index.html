@@ -10,25 +10,75 @@
 
     <title>画像識別アプリ</title>
 
+    <style>
+
+        /* スタイルは必要に応じて追加 */
+
+        #camera {
+
+            width: 100%;
+
+            height: auto;
+
+        }
+
+        #snapshotCanvas {
+
+            display: none;
+
+            width: 100%;
+
+            height: auto;
+
+        }
+
+        #results {
+
+            margin-top: 20px;
+
+        }
+
+        #correctionForm {
+
+            margin-top: 20px;
+
+        }
+
+    </style>
+
 </head>
 
 <body>
 
     <h1>画像識別アプリ</h1>
 
-    <video id="camera" width="640" height="480" autoplay hidden></video>
 
-    <canvas id="snapshotCanvas" hidden></canvas>
 
-    <br>
+    <!-- カメラ表示用 -->
 
-    <input type="file" id="uploadInput" hidden>
+    <video id="camera" autoplay></video>
 
-    <button id="uploadButton">ファイルアップロード</button>
+    <canvas id="snapshotCanvas"></canvas>
 
-    <button id="identifyButton">識別</button>
+
+
+    <div>
+
+        <button id="captureButton">カメラ起動</button>
+
+        <input type="file" id="uploadInput" style="display: none;" />
+
+        <button id="uploadButton">画像アップロード</button>
+
+    </div>
+
+
 
     <div id="results"></div>
+
+
+
+    <button id="identifyButton">識別開始</button>
 
 
 
@@ -36,7 +86,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
 
-    <script src="app.js"></script>
+    <script src="script.js"></script>
 
 </body>
 
