@@ -18,6 +18,8 @@ let selectedImage = null;
 
 let originalPrediction = null; // 最初の識別結果を保存
 
+let originalEnglishName = null; // 英語名を保存
+
 
 
 // アップロードボタンでファイル選択
@@ -152,6 +154,8 @@ identifyButton.addEventListener("click", async () => {
 
             originalPrediction = predictions[0].className;  // 最初の識別結果を保存
 
+            originalEnglishName = originalPrediction; // 英語名も保存
+
             displayIdentificationResults(predictions);
 
         };
@@ -248,7 +252,7 @@ function displayCorrectionInterface(currentLabel) {
 
 function updateJapaneseLabel(newJapaneseLabel) {
 
-    const englishLabel = originalPrediction;  // 元の英語名を使う
+    const englishLabel = originalEnglishName;  // 最初の英語名を保持
 
     resultsDiv.innerHTML = `
 
