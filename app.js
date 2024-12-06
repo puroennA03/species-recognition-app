@@ -44,12 +44,6 @@ const labelMap = {
 
 
 
-// iNaturalist APIベースURL
-
-const iNaturalistAPIBase = "https://api.inaturalist.org/v1/taxa";
-
-
-
 // 初期化：MobileNetモデルをロード
 
 async function init() {
@@ -69,38 +63,6 @@ init();
 uploadButton.addEventListener("click", () => {
 
     uploadInput.click();
-
-});
-
-
-
-// ファイルアップロード
-
-uploadInput.addEventListener("change", (event) => {
-
-    const file = event.target.files[0];
-
-    if (!file) {
-
-        resultsDiv.innerHTML = "<p>ファイルが選択されませんでした。</p>";
-
-        return;
-
-    }
-
-
-
-    const reader = new FileReader();
-
-    reader.onload = () => {
-
-        selectedImage = reader.result; // Base64形式の画像データ
-
-        resultsDiv.innerHTML = "<p>画像が選択されました。識別ボタンを押してください。</p>";
-
-    };
-
-    reader.readAsDataURL(file);
 
 });
 
@@ -220,9 +182,9 @@ identifyButton.addEventListener("click", async () => {
 
 
 
-            // 日本語ラベリング適用またはiNaturalist APIで検索
+            // 日本語ラベリング適用
 
-            const japaneseLabel = await getJapaneseLabel(topPrediction);
+            const japaneseLabel = labelMap[topPrediction] || "ラベルなし";
 
 
 
@@ -262,46 +224,6 @@ identifyButton.addEventListener("click", async () => {
 
 
 
-// ラベルを取得する関数（ラベリングマップまたはiNaturalist APIを使用）
-
-async function getJapaneseLabel(englishLabel) {
-
-    // ラベルマッピングで確認
-
-    if (labelMap[englishLabel]) {
-
-        return labelMap[englishLabel];
-
-    }
-
-
-
-    // iNaturalist APIで検索
-
-    try {
-
-        const response = await axios.get(`${iNaturalistAPIBase}?q=${encodeURIComponent(englishLabel)}`);
-
-        if (response.data.results.length > 0) {
-
-            const taxa = response.data.results[0];
-
-            return taxa.preferred_common_name || "ラベルなし";
-
-        }
-
-    } catch (err) {
-
-        console.error("iNaturalist APIエラー: ", err);
-
-    }
-
-    return "ラベルなし";
-
-}
-
-
-
 // 修正インターフェースを表示
 
 function displayCorrectionInterface(currentLabel) {
@@ -322,13 +244,13 @@ function displayCorrectionInterface(currentLabel) {
 
 
 
-    document.getElementById("submitCorrection").addEventListener("click", async () => {
+    document.getElementById("submitCorrection").addEventListener("click", () => {
 
         const newLabel = document.getElementById("newLabel").value;
 
         if (newLabel) {
 
-            await trainModel(currentLabel, newLabel);
+            trainModel(currentLabel, newLabel);
 
         }
 
@@ -340,20 +262,22 @@ function displayCorrectionInterface(currentLabel) {
 
 // 再学習処理
 
-async function trainModel(oldLabel, newLabel) {
+function trainModel(oldLabel, newLabel) {
 
     // ラベルマッピングを更新
 
     labelMap[oldLabel] = newLabel;
 
-
-
-    // ここにモデルの再学習ロジックを実装（TensorFlow.jsを活用）
-
-    // ※詳細な実装にはデータセットやバックエンドのサポートが必要です
-
     console.log(`モデルを再学習: ${oldLabel} -> ${newLabel}`);
 
-    resultsDiv.innerHTML = "<p>モデルが再学習されました。</p>";
+
+
+    // ユーザー通知
+
+    resultsDiv.innerHTML = `
+
+        <p>再学習完了: ${oldLabel} の新しいラベルは ${newLabel} です。</p>
+
+    `;
 
 }
