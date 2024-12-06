@@ -259,3 +259,4 @@ async function translateToJapanese(text) {
     }
 
 }
+
