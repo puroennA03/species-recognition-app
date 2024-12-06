@@ -16,6 +16,8 @@ const resultsDiv = document.getElementById("results");
 
 let selectedImage = null;
 
+let originalPrediction = null; // 最初の識別結果を保存
+
 
 
 // アップロードボタンでファイル選択
@@ -148,6 +150,8 @@ identifyButton.addEventListener("click", async () => {
 
             console.log("Predictions:", predictions);
 
+            originalPrediction = predictions[0].className;  // 最初の識別結果を保存
+
             displayIdentificationResults(predictions);
 
         };
@@ -212,9 +216,9 @@ function displayCorrectionInterface(currentLabel) {
 
         <div id="correctionForm">
 
-            <p>正しい名前を入力してください:</p>
+            <p>正しい日本語名を入力してください:</p>
 
-            <input type="text" id="newLabel" placeholder="正しい名前">
+            <input type="text" id="newLabel" placeholder="正しい日本語名">
 
             <button id="submitCorrection">送信</button>
 
@@ -230,7 +234,7 @@ function displayCorrectionInterface(currentLabel) {
 
         if (newLabel) {
 
-            trainModel(currentLabel, newLabel);
+            updateJapaneseLabel(newLabel); // 日本語名だけ更新
 
         }
 
@@ -240,91 +244,23 @@ function displayCorrectionInterface(currentLabel) {
 
 
 
-// モデル再学習処理
+// 日本語名の更新
 
-const labelMap = {}; // 既存のラベルを保持
+function updateJapaneseLabel(newJapaneseLabel) {
 
-
-
-function trainModel(oldLabel, newLabel) {
-
-    // ラベルマップに新しいラベルを設定
-
-    labelMap[oldLabel] = newLabel;
-
-
-
-    console.log(`モデルを再学習: ${oldLabel} -> ${newLabel}`);
-
-
-
-    // 結果を表示
+    const englishLabel = originalPrediction;  // 元の英語名を使う
 
     resultsDiv.innerHTML = `
 
-        <p>再学習完了: ${oldLabel} の新しいラベルは ${newLabel} です。</p>
+        <h2>識別結果</h2>
+
+        <p>英語名: ${englishLabel}</p>
+
+        <p>日本語名: ${newJapaneseLabel}</p>
 
     `;
 
-
-
-    // 修正後のラベルを表示する処理を追加
-
-    updateIdentificationResults();
-
-}
-
-
-
-// 識別結果を更新する処理
-
-function updateIdentificationResults() {
-
-    // 修正されたラベルマップを使って、識別結果を更新
-
-    if (selectedImage) {
-
-        const imageElement = new Image();
-
-        imageElement.src = selectedImage;
-
-        imageElement.onload = async () => {
-
-            const model = await mobilenet.load();
-
-            const predictions = await model.classify(imageElement);
-
-
-
-            if (predictions.length > 0) {
-
-                const topPrediction = predictions[0].className;
-
-                // 新しいラベルがある場合は、それを使う
-
-                const correctedLabel = labelMap[topPrediction] || topPrediction;
-
-                const translatedPrediction = await translateToJapanese(correctedLabel);
-
-                resultsDiv.innerHTML = `
-
-                    <h2>識別結果</h2>
-
-                    <p>英語名: ${correctedLabel}</p>
-
-                    <p>日本語名: ${translatedPrediction}</p>
-
-                `;
-
-            } else {
-
-                resultsDiv.innerHTML = "<p>識別結果が見つかりません。</p>";
-
-            }
-
-        };
-
-    }
+    console.log(`日本語名を更新: ${englishLabel} -> ${newJapaneseLabel}`);
 
 }
 
