@@ -16,41 +16,11 @@ const resultsDiv = document.getElementById("results");
 
 let selectedImage = null;
 
-let topPrediction = null; // topPredictionを外部スコープに移動
 
 
+// アップロードボタンでファイル選択
 
-// アップロードボタンを押すとファイル選択を表示
-
-uploadButton.addEventListener("click", () => {
-
-    uploadInput.click();
-
-});
-
-
-
-// ファイルアップロード
-
-uploadInput.addEventListener("change", (event) => {
-
-    const file = event.target.files[0];
-
-    if (file) {
-
-        const reader = new FileReader();
-
-        reader.onload = () => {
-
-            selectedImage = reader.result;
-
-            resultsDiv.innerHTML = "<p>ファイルが選択されました。</p>";
-
-        };
-
-        reader.readAsDataURL(file);
-
-});
+uploadButton.addEventListener("click", () => uploadInput.click());
 
 
 
@@ -74,17 +44,7 @@ captureButton.addEventListener("click", async () => {
 
 camera.addEventListener("click", () => {
 
-    const context = snapshotCanvas.getContext("2d");
-
-    snapshotCanvas.width = camera.videoWidth;
-
-    snapshotCanvas.height = camera.videoHeight;
-
-    context.drawImage(camera, 0, 0);
-
-    selectedImage = snapshotCanvas.toDataURL("image/jpeg");
-
-    resultsDiv.innerHTML = "<p>写真が選択されました。</p>";
+    captureSnapshot();
 
     stopCamera();
 
@@ -108,7 +68,49 @@ function stopCamera() {
 
 
 
-// 識別ボタン
+// 写真をキャンバスに描画
+
+function captureSnapshot() {
+
+    const context = snapshotCanvas.getContext("2d");
+
+    snapshotCanvas.width = camera.videoWidth;
+
+    snapshotCanvas.height = camera.videoHeight;
+
+    context.drawImage(camera, 0, 0);
+
+    selectedImage = snapshotCanvas.toDataURL("image/jpeg");
+
+    resultsDiv.innerHTML = "<p>写真が選択されました。</p>";
+
+}
+
+
+
+// ファイルアップロード処理
+
+uploadInput.addEventListener("change", (event) => {
+
+    const file = event.target.files[0];
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+
+        selectedImage = reader.result;
+
+        resultsDiv.innerHTML = "<p>ファイルが選択されました。</p>";
+
+    };
+
+    reader.readAsDataURL(file);
+
+});
+
+
+
+// 識別処理
 
 identifyButton.addEventListener("click", async () => {
 
@@ -124,81 +126,65 @@ identifyButton.addEventListener("click", async () => {
 
     resultsDiv.innerHTML = "<p>識別中...</p>";
 
+    const model = await mobilenet.load();
 
+    const imageElement = new Image();
 
-    // MobileNetでの識別処理
+    imageElement.src = selectedImage;
 
-    try {
+    imageElement.onload = async () => {
 
-        const model = await mobilenet.load();
+        const predictions = await model.classify(imageElement);
 
-        const imageElement = new Image();
+        displayIdentificationResults(predictions);
 
-        imageElement.src = selectedImage;
-
-
-
-        imageElement.onload = async () => {
-
-            const predictions = await model.classify(imageElement);
-
-            if (predictions.length > 0) {
-
-                topPrediction = predictions[0].className;
-
-
-
-                // 翻訳処理
-
-                const translatedPrediction = await translateToJapanese(topPrediction);
-
-
-
-                // 結果をHTMLに表示
-
-                resultsDiv.innerHTML = `
-
-                    <h2>識別結果</h2>
-
-                    <p>英語名: ${topPrediction}</p>
-
-                    <p>日本語名: ${translatedPrediction}</p>
-
-                    <button id="correctButton">間違っていますか？</button>
-
-                `;
-
-
-
-                // 正しい名前を修正するボタンのイベントリスナー
-
-                document.getElementById("correctButton").addEventListener("click", () => {
-
-                    displayCorrectionInterface(topPrediction);
-
-                });
-
-            } else {
-
-                resultsDiv.innerHTML = "<p>識別結果が見つかりません。</p>";
-
-            }
-
-        };
-
-    } catch (err) {
-
-        console.error("識別中にエラーが発生しました: ", err);
-
-        resultsDiv.innerHTML = "<p>識別中にエラーが発生しました。</p>";
-
-    }
+    };
 
 });
 
 
 
-// 修正インターフェースを表示
+// 識別結果表示
+
+async function displayIdentificationResults(predictions) {
+
+    if (predictions.length > 0) {
+
+        const topPrediction = predictions[0].className;
+
+        const translatedPrediction = await translateToJapanese(topPrediction);
+
+        resultsDiv.innerHTML = `
+
+            <h2>識別結果</h2>
+
+            <p>英語名: ${topPrediction}</p>
+
+            <p>日本語名: ${translatedPrediction}</p>
+
+            <button id="correctButton">間違っていますか？</button>
+
+        `;
+
+
+
+        document.getElementById("correctButton").addEventListener("click", () => {
+
+            displayCorrectionInterface(topPrediction);
+
+        });
+
+    } else {
+
+        resultsDiv.innerHTML = "<p>識別結果が見つかりません。</p>";
+
+    }
+
+}
+
+
+
+// 修正インターフェース表示
 
 function displayCorrectionInterface(currentLabel) {
 
@@ -234,21 +220,15 @@ function displayCorrectionInterface(currentLabel) {
 
 
 
-// 再学習処理
+// モデル再学習処理
 
-const labelMap = {}; // labelMapを初期化
+const labelMap = {};
 
 function trainModel(oldLabel, newLabel) {
-
-    // ラベルマッピングを更新
 
     labelMap[oldLabel] = newLabel;
 
     console.log(`モデルを再学習: ${oldLabel} -> ${newLabel}`);
-
-
-
-    // ユーザー通知
 
     resultsDiv.innerHTML = `
 
