@@ -210,6 +210,8 @@ function displayCorrectionInterface(currentLabel) {
 
         if (newLabel) {
 
+            // 新しいラベルをモデルに反映
+
             trainModel(currentLabel, newLabel);
 
         }
@@ -222,19 +224,89 @@ function displayCorrectionInterface(currentLabel) {
 
 // モデル再学習処理
 
-const labelMap = {};
+const labelMap = {}; // 既存のラベルを保持
+
+
 
 function trainModel(oldLabel, newLabel) {
 
+    // ラベルマップに新しいラベルを設定
+
     labelMap[oldLabel] = newLabel;
 
+
+
     console.log(`モデルを再学習: ${oldLabel} -> ${newLabel}`);
+
+
+
+    // 結果を表示
 
     resultsDiv.innerHTML = `
 
         <p>再学習完了: ${oldLabel} の新しいラベルは ${newLabel} です。</p>
 
     `;
+
+
+
+    // 修正後のラベルを表示する処理を追加
+
+    updateIdentificationResults();
+
+}
+
+
+
+// 識別結果を更新する処理
+
+function updateIdentificationResults() {
+
+    // 修正されたラベルマップを使って、識別結果を更新
+
+    if (selectedImage) {
+
+        const imageElement = new Image();
+
+        imageElement.src = selectedImage;
+
+        imageElement.onload = async () => {
+
+            const model = await mobilenet.load();
+
+            const predictions = await model.classify(imageElement);
+
+
+
+            if (predictions.length > 0) {
+
+                const topPrediction = predictions[0].className;
+
+                // 新しいラベルがある場合は、それを使う
+
+                const correctedLabel = labelMap[topPrediction] || topPrediction;
+
+                const translatedPrediction = await translateToJapanese(correctedLabel);
+
+                resultsDiv.innerHTML = `
+
+                    <h2>識別結果</h2>
+
+                    <p>英語名: ${correctedLabel}</p>
+
+                    <p>日本語名: ${translatedPrediction}</p>
+
+                `;
+
+            } else {
+
+                resultsDiv.innerHTML = "<p>識別結果が見つかりません。</p>";
+
+            }
+
+        };
+
+    }
 
 }
 
@@ -259,4 +331,3 @@ async function translateToJapanese(text) {
     }
 
 }
-
