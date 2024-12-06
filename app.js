@@ -126,19 +126,39 @@ identifyButton.addEventListener("click", async () => {
 
     resultsDiv.innerHTML = "<p>識別中...</p>";
 
-    const model = await mobilenet.load();
+    try {
 
-    const imageElement = new Image();
+        const model = await mobilenet.load();
 
-    imageElement.src = selectedImage;
+        console.log("MobileNet model loaded.");
 
-    imageElement.onload = async () => {
+        
 
-        const predictions = await model.classify(imageElement);
+        const imageElement = new Image();
 
-        displayIdentificationResults(predictions);
+        imageElement.src = selectedImage;
 
-    };
+        
+
+        imageElement.onload = async () => {
+
+            console.log("Image loaded, starting classification...");
+
+            const predictions = await model.classify(imageElement);
+
+            console.log("Predictions:", predictions);
+
+            displayIdentificationResults(predictions);
+
+        };
+
+    } catch (err) {
+
+        console.error("識別中にエラーが発生しました: ", err);
+
+        resultsDiv.innerHTML = "<p>識別中にエラーが発生しました。</p>";
+
+    }
 
 });
 
@@ -209,8 +229,6 @@ function displayCorrectionInterface(currentLabel) {
         const newLabel = document.getElementById("newLabel").value;
 
         if (newLabel) {
-
-            // 新しいラベルをモデルに反映
 
             trainModel(currentLabel, newLabel);
 
