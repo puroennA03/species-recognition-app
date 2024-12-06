@@ -30,6 +30,30 @@ uploadButton.addEventListener("click", () => {
 
 
 
+// ファイルアップロード
+
+uploadInput.addEventListener("change", (event) => {
+
+    const file = event.target.files[0];
+
+    if (file) {
+
+        const reader = new FileReader();
+
+        reader.onload = () => {
+
+            selectedImage = reader.result;
+
+            resultsDiv.innerHTML = "<p>ファイルが選択されました。</p>";
+
+        };
+
+        reader.readAsDataURL(file);
+
+});
+
+
+
 // カメラ起動
 
 captureButton.addEventListener("click", async () => {
@@ -84,28 +108,6 @@ function stopCamera() {
 
 
 
-// ファイルアップロード
-
-uploadInput.addEventListener("change", (event) => {
-
-    const file = event.target.files[0];
-
-    const reader = new FileReader();
-
-    reader.onload = () => {
-
-        selectedImage = reader.result;
-
-        resultsDiv.innerHTML = "<p>ファイルが選択されました。</p>";
-
-    };
-
-    reader.readAsDataURL(file);
-
-});
-
-
-
 // 識別ボタン
 
 identifyButton.addEventListener("click", async () => {
@@ -149,12 +151,6 @@ identifyButton.addEventListener("click", async () => {
                 // 翻訳処理
 
                 const translatedPrediction = await translateToJapanese(topPrediction);
-
-
-
-                // Wikipedia情報取得
-
-                const detailText = await fetchWikipediaDetails(topPrediction);
 
 
 
