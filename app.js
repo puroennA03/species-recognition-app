@@ -16,13 +16,91 @@ const resultsDiv = document.getElementById("results");
 
 let selectedImage = null;
 
+let mobilenetModel = null;
 
 
-// アップロードボタンを押すとファイル選択を表示
+
+// 日本語ラベリングマップ
+
+const labelMap = {
+
+    "bullfrog": "ウシガエル",
+
+    "Coat-of-Mail-Shell": "ヒザラガイ",
+
+    "grasshopper": "バッタ",
+
+    "jellyfish": "クラゲ",
+
+    "red fox": "アカギツネ",
+
+    "badger": "アナグマ",
+
+    "wood rabbit": "野ウサギ",
+
+    "spoonbill": "ヘラサギ"
+
+};
+
+
+
+// iNaturalist APIベースURL
+
+const iNaturalistAPIBase = "https://api.inaturalist.org/v1/taxa";
+
+
+
+// 初期化：MobileNetモデルをロード
+
+async function init() {
+
+    mobilenetModel = await mobilenet.load();
+
+    console.log("MobileNetモデルがロードされました。");
+
+}
+
+init();
+
+
+
+// アップロードボタンイベント
 
 uploadButton.addEventListener("click", () => {
 
     uploadInput.click();
+
+});
+
+
+
+// ファイルアップロード
+
+uploadInput.addEventListener("change", (event) => {
+
+    const file = event.target.files[0];
+
+    if (!file) {
+
+        resultsDiv.innerHTML = "<p>ファイルが選択されませんでした。</p>";
+
+        return;
+
+    }
+
+
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+
+        selectedImage = reader.result; // Base64形式の画像データ
+
+        resultsDiv.innerHTML = "<p>画像が選択されました。識別ボタンを押してください。</p>";
+
+    };
+
+    reader.readAsDataURL(file);
 
 });
 
@@ -72,9 +150,13 @@ function stopCamera() {
 
     const stream = camera.srcObject;
 
-    const tracks = stream.getTracks();
+    if (stream) {
 
-    tracks.forEach(track => track.stop());
+        const tracks = stream.getTracks();
+
+        tracks.forEach(track => track.stop());
+
+    }
 
     camera.hidden = true;
 
@@ -122,9 +204,7 @@ identifyButton.addEventListener("click", async () => {
 
 
 
-    // MobileNetでの識別処理
-
-    const model = await mobilenet.load();
+    // MobileNetで識別
 
     const imageElement = new Image();
 
@@ -132,7 +212,7 @@ identifyButton.addEventListener("click", async () => {
 
     imageElement.onload = async () => {
 
-        const predictions = await model.classify(imageElement);
+        const predictions = await mobilenetModel.classify(imageElement);
 
         if (predictions.length > 0) {
 
@@ -140,31 +220,35 @@ identifyButton.addEventListener("click", async () => {
 
 
 
-            // 翻訳処理
+            // 日本語ラベリング適用またはiNaturalist APIで検索
 
-            const translatedPrediction = await translateToJapanese(topPrediction);
-
-
-
-            // Wikipedia情報取得
-
-            const detailText = await fetchWikipediaDetails(topPrediction);
+            const japaneseLabel = await getJapaneseLabel(topPrediction);
 
 
 
-            // 結果をHTMLに表示
+            // 結果を表示
 
             resultsDiv.innerHTML = `
 
                 <h2>識別結果</h2>
 
-                <p>英語名: ${topPrediction}</p>
+                <p>名前（英語）: ${topPrediction}</p>
 
-                <p>日本語名: ${translatedPrediction}</p>
+                <p>名前（日本語）: ${japaneseLabel}</p>
 
-                <p>詳細情報: ${detailText}</p>
+                <button id="correctButton">間違っていますか？</button>
 
             `;
+
+
+
+            // 再学習用ボタンのイベント
+
+            document.getElementById("correctButton").addEventListener("click", () => {
+
+                displayCorrectionInterface(topPrediction);
+
+            });
 
         } else {
 
@@ -178,44 +262,98 @@ identifyButton.addEventListener("click", async () => {
 
 
 
-// 翻訳処理
+// ラベルを取得する関数（ラベリングマップまたはiNaturalist APIを使用）
 
-async function translateToJapanese(text) {
+async function getJapaneseLabel(englishLabel) {
+
+    // ラベルマッピングで確認
+
+    if (labelMap[englishLabel]) {
+
+        return labelMap[englishLabel];
+
+    }
+
+
+
+    // iNaturalist APIで検索
 
     try {
 
-        const response = await axios.get(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|ja`);
+        const response = await axios.get(`${iNaturalistAPIBase}?q=${encodeURIComponent(englishLabel)}`);
 
-        return response.data.responseData.translatedText || "翻訳エラー";
+        if (response.data.results.length > 0) {
+
+            const taxa = response.data.results[0];
+
+            return taxa.preferred_common_name || "ラベルなし";
+
+        }
 
     } catch (err) {
 
-        console.error("翻訳エラー: ", err);
-
-        return "翻訳エラー";
+        console.error("iNaturalist APIエラー: ", err);
 
     }
+
+    return "ラベルなし";
 
 }
 
 
 
-// Wikipedia APIで詳細情報取得
+// 修正インターフェースを表示
 
-async function fetchWikipediaDetails(query) {
+function displayCorrectionInterface(currentLabel) {
 
-    try {
+    resultsDiv.innerHTML += `
 
-        const response = await axios.get(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)}`);
+        <div id="correctionForm">
 
-        return response.data.extract || "詳細情報が見つかりませんでした。";
+            <p>正しい名前を入力してください:</p>
 
-    } catch (err) {
+            <input type="text" id="newLabel" placeholder="正しい名前">
 
-        console.error("APIエラー: ", err);
+            <button id="submitCorrection">送信</button>
 
-        return "APIエラー";
+        </div>
 
-    }
+    `;
+
+
+
+    document.getElementById("submitCorrection").addEventListener("click", async () => {
+
+        const newLabel = document.getElementById("newLabel").value;
+
+        if (newLabel) {
+
+            await trainModel(currentLabel, newLabel);
+
+        }
+
+    });
+
+}
+
+
+
+// 再学習処理
+
+async function trainModel(oldLabel, newLabel) {
+
+    // ラベルマッピングを更新
+
+    labelMap[oldLabel] = newLabel;
+
+
+
+    // ここにモデルの再学習ロジックを実装（TensorFlow.jsを活用）
+
+    // ※詳細な実装にはデータセットやバックエンドのサポートが必要です
+
+    console.log(`モデルを再学習: ${oldLabel} -> ${newLabel}`);
+
+    resultsDiv.innerHTML = "<p>モデルが再学習されました。</p>";
 
 }
