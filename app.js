@@ -18,29 +18,37 @@ let selectedImage = null;
 
 let mobilenetModel = null;
 
+let labelMap = {};  // ラベルマップを格納するオブジェクト
 
 
-// 日本語ラベリングマップ
 
-const labelMap = {
+// ラベルマップを外部JSONファイルからロード
 
-    "bullfrog": "ウシガエル",
+async function loadLabelMap() {
 
-    "Coat-of-Mail-Shell": "ヒザラガイ",
+    try {
 
-    "grasshopper": "バッタ",
+        const response = await fetch('labels.json');  // サーバー上のJSONファイルを指定
 
-    "jellyfish": "クラゲ",
+        if (!response.ok) {
 
-    "red fox": "アカギツネ",
+            throw new Error("ラベルマップの読み込みに失敗しました");
 
-    "badger": "アナグマ",
+        }
 
-    "wood rabbit": "野ウサギ",
+        labelMap = await response.json();  // JSONデータを読み込んでlabelMapに格納
 
-    "spoonbill": "ヘラサギ"
+        console.log('ラベルマップがロードされました');
 
-};
+    } catch (error) {
+
+        console.error(error);
+
+        alert("ラベルマップの読み込みに失敗しました。");
+
+    }
+
+}
 
 
 
@@ -51,6 +59,8 @@ async function init() {
     mobilenetModel = await mobilenet.load();
 
     console.log("MobileNetモデルがロードされました。");
+
+    await loadLabelMap();  // ラベルマップもロード
 
 }
 
@@ -184,7 +194,7 @@ identifyButton.addEventListener("click", async () => {
 
             // 日本語ラベリング適用
 
-            const japaneseLabel = labelMap[topPrediction] || "ラベルなし";
+            const japaneseLabel = labelMap[topPrediction] || `未登録ラベル: ${topPrediction}`;
 
 
 

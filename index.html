@@ -8,53 +8,36 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>生物画像認識アプリ</title>
+    <title>画像識別アプリ</title>
 
 </head>
 
 <body>
 
-    <h1>生物画像認識アプリ</h1>
+    <h1>画像識別アプリ</h1>
 
-    <div>
-
-        <button id="captureButton">カメラで撮影</button>
-
-        <button id="uploadButton">画像をアップロード</button>
-
-        <input type="file" id="uploadInput" accept="image/*" style="display:none;">
-
-        <button id="identifyButton">識別する</button>
-
-    </div>
-
-
-
-    <!-- カメラの表示 -->
-
-    <video id="camera" autoplay hidden></video>
+    <video id="camera" width="640" height="480" autoplay hidden></video>
 
     <canvas id="snapshotCanvas" hidden></canvas>
 
+    <br>
 
+    <input type="file" id="uploadInput" hidden>
 
-    <!-- 結果表示 -->
+    <button id="uploadButton">ファイルアップロード</button>
+
+    <button id="identifyButton">識別</button>
 
     <div id="results"></div>
 
 
 
-    <!-- スクリプト読み込み -->
-
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
 
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
-
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
     <script src="app.js"></script>
 
 </body>
 
 </html>
-
