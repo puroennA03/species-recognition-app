@@ -10,41 +10,11 @@
 
     <title>画像識別アプリ</title>
 
-    <style>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
 
-        /* スタイルは必要に応じて追加 */
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
 
-        #camera {
-
-            width: 100%;
-
-            height: auto;
-
-        }
-
-        #snapshotCanvas {
-
-            display: none;
-
-            width: 100%;
-
-            height: auto;
-
-        }
-
-        #results {
-
-            margin-top: 20px;
-
-        }
-
-        #correctionForm {
-
-            margin-top: 20px;
-
-        }
-
-    </style>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
 </head>
 
@@ -52,41 +22,33 @@
 
     <h1>画像識別アプリ</h1>
 
+    
 
+    <!-- アップロードボタン -->
 
-    <!-- カメラ表示用 -->
+    <button id="uploadButton">画像をアップロード</button>
 
-    <video id="camera" autoplay></video>
+    <input type="file" id="uploadInput" style="display: none;" />
+
+    
+
+    <!-- カメラとキャプチャボタン -->
+
+    <button id="captureButton">カメラを起動</button>
+
+    <video id="camera" width="100%" autoplay></video>
 
     <canvas id="snapshotCanvas"></canvas>
 
 
 
-    <div>
+    <!-- 識別結果表示 -->
 
-        <button id="captureButton">カメラ起動</button>
-
-        <input type="file" id="uploadInput" style="display: none;" />
-
-        <button id="uploadButton">画像アップロード</button>
-
-    </div>
-
-
+    <button id="identifyButton">識別する</button>
 
     <div id="results"></div>
 
-
-
-    <button id="identifyButton">識別開始</button>
-
-
-
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
-
-    <script src="script.js"></script>
+    
 
 </body>
 
